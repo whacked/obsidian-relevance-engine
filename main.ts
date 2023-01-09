@@ -17,6 +17,11 @@ export const VIEW_TYPE_EXAMPLE = "example-view";
 // canvas stuff
 // window.app.workspace.activeLeaf.view.canvas.updateSelection((t) => {console.log(t)})
 // window.app.workspace.activeLeaf.view.canvas.getViewportNodes()[0].blur()
+// const nodes: Array<any> = maybeCanvas.getViewportNodes()
+// const nodes: Array<any> = maybeCanvas.getData().nodes as Array<CanvasNodeData>
+// viewportNode.{select,focus,deselect,blur}
+// file stuff
+// window.app.vault.getAbstractFileByPath("README.md")
 
 type MatchRange = [number, number]
 
@@ -40,10 +45,6 @@ function _highlightTextInRanges(app: App, currentText: string, characterRanges: 
 }
 
 function openFileAndHighlightRanges(app: App, filePathInVault: string, matchCharacterRanges: Array<MatchRange>) {
-	// if (app.workspace.activeEditor == null) {
-	// 	return
-	// }
-	// window.app.vault.getAbstractFileByPath("README.md")
 	app.workspace.openLinkText(filePathInVault, '').then(() => {
 		_highlightTextInRanges(app, _getCurrentViewDataString(), matchCharacterRanges)
 	})
@@ -72,8 +73,6 @@ function highlightNodesInCanvasMatchingSearchPattern(searchPattern: string): Arr
 	const maybeCanvas = maybeCanvasView ? (maybeCanvasView as any)['canvas'] : null
 	const matches: Array<any> = []
 	if (maybeCanvas) {
-		// const nodes: Array<any> = maybeCanvas.getViewportNodes()
-		// const nodes: Array<any> = maybeCanvas.getData().nodes as Array<CanvasNodeData>
 		maybeCanvas.updateSelection((selectedNodesSet: Set<CanvasNodeData>) => {
 			selectedNodesSet.clear()
 			for (const node of maybeCanvas.nodes.values()) {
@@ -81,15 +80,8 @@ function highlightNodesInCanvasMatchingSearchPattern(searchPattern: string): Arr
 				const searchRegExp = new RegExp(searchPattern, "i")
 				const maybeMatch = searchRegExp.exec(nodeText)
 				if (maybeMatch) {
-					const fromIndex = maybeMatch.index
-					const toIndex = searchRegExp.lastIndex
 					selectedNodesSet.add(node)
 					matches.push(node)
-					// viewportNode.select()
-					// viewportNode.focus()
-				} else {
-					// viewportNode.deselect()
-					// viewportNode.blur()
 				}
 			}
 		})
@@ -176,7 +168,6 @@ class OpenableSearchResult extends SearchResult {
 	}
 
 	open() {
-		console.log("GOING FOR", this.link, [[this.fromIndex, this.toIndex]])
 		if (this.link.endsWith(".canvas")) {
 			this.app.workspace.openLinkText(this.link, '')
 		} else {
@@ -242,14 +233,6 @@ class CanvasMatcher extends OpenableSearchResult {
 						this.app.workspace.openLinkText(this.canvasFile, '').then((thing) => {
 							highlightNodesInCanvasMatchingSearchPattern(this.link)
 						})
-						// doesn't work because the file only goes into the files map
-						// after it has been opened in the workspace
-						// app.workspace.getLeaf().openFile(
-						// 	(app.vault.adapter as any /* FIXME */
-						// 	)['files'][FIXME_mainCanvasFile]
-						// ).then(() => {
-						// 	highlightNodesInCanvasMatchingSearchPattern(activeFilePath)
-						// })
 					},
 				},
 				["h3", this.matchDisplayText],
@@ -400,7 +383,7 @@ export class ExampleView extends ItemView {
 	}
 
 	getDisplayText() {
-		return "Example view WHAT?";
+		return "Example view display text";
 	}
 
 	createEntry() {
@@ -684,25 +667,6 @@ export class ExampleView extends ItemView {
 		])
 		this.mainContainer.appendChild(SearchSectionComponent)
 
-		const enginesToRun = {
-			[OpenableSearchResult.ENGINE_NAME]: true,
-			[CanvasMatcher.ENGINE_NAME]: true,
-		}
-
-		interface MyAppState {
-			currentFocusedFilePath: string | null
-			matchesToDisplay: Array<OpenableSearchResult>
-			runningEngines: Record<string, boolean>
-			fooTest: Array<any>
-		}
-		const store = create<MyAppState>(() => ({
-			currentFocusedFilePath: null,
-			matchesToDisplay: [],
-			runningEngines: { ...enginesToRun },
-			fooTest: [],
-		}))
-		const { getState, setState, subscribe, destroy } = store
-
 		function runRelevanceEngines() {
 			const activeFilePath = window.app.workspace.getActiveFile()?.path
 			if (!activeFilePath) {
@@ -810,15 +774,12 @@ export class ExampleView extends ItemView {
 				}
 			}
 
-			const header = renderHiccup([
 				"div",
 				[
 					"h4",
 					`${currentState.currentFocusedFilePath} (${currentState.matchesToDisplay?.length} connections)`
 				],
 				maybeCanvasInfoElements,
-			])
-			container.appendChild(header)
 
 			const hiccup: Array<any> = ["div.search-results-container", {
 				style: {
@@ -845,12 +806,6 @@ export class ExampleView extends ItemView {
 				]
 			]
 		]))
-		// this.registerInterval(window.setInterval(() => {
-		// 	const currentState = getState()
-		// 	if (Object.values(currentState.runningEngines).reduce((a, b) => a || b, false)) {
-		// 		runRelevanceEngines()
-		// 	}
-		// }, 2222))
 
 		app.workspace.on('file-open', (file) => {
 			const currentState = getState()
@@ -879,6 +834,31 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
 }
+
+
+const enginesToRun = {
+	[OpenableSearchResult.ENGINE_NAME]: true,
+	[CanvasMatcher.ENGINE_NAME]: true,
+}
+
+interface MyAppState {
+	currentFocusedFilePath: string | null
+	matchesToDisplay: Array<OpenableSearchResult>
+	runningEngines: Record<string, boolean>
+	xclDirectiveText: string
+	xclRetrievedText: string
+	fooTest: Array<any>
+}
+const store = create<MyAppState>(() => ({
+	currentFocusedFilePath: null,
+	matchesToDisplay: [],
+	runningEngines: { ...enginesToRun },
+	xclDirectiveText: "",
+	xclRetrievedText: "",
+	fooTest: [],
+}))
+const { getState, setState, subscribe, destroy } = store
+
 
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
@@ -1042,10 +1022,4 @@ class SampleSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 	}
-}
-
-
-if (true) {
-	// (window as any)['fun'] = openFileAndHighlightRanges
-	console.log('%cHELLO, last reload: ' + new Date(), 'font-size:24pt;color:lime;')
 }
